@@ -27,12 +27,11 @@ def check_stock_conditions(data):
     condition_1 = condition_1 & (data["30MA"] > data["40MA"])
     condition_2 = data["150MA"] > data["200MA"]
     condition_3 = data["200MA"].diff(20).gt(0) | data["200MA"].diff(120).gt(0)
-    condition_4 = (data["Close"].shift(1) < data["50MA"].shift(1)) & (data["Close"] > data["50MA"])
+condition_4 = data["Close"] > data["50MA"]
     condition_5 = data["RS-Ranking"] >= 85
     condition_6 = data["Volume"].diff().lt(0).rolling(window=5).sum() > 0
     condition_7 = data["Volume"].rolling(window=10).mean().diff().lt(0)
-    return condition_1 & condition_2 & condition_3 & condition_4 & condition_5 & condition_6 & condition_7
-
+return condition_1 & condition_2 & condition_3 & condition_4 & condition_5
 # ── Sidebar Controls ──────────────────────────────────────────────────────────
 st.sidebar.header("⚙️ Settings")
 rs_threshold = st.sidebar.slider("Min RS Ranking", 50, 99, 85)
