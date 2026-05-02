@@ -21,34 +21,35 @@ def get_nse_tickers():
     return [s + ".NS" for s in symbols]
 
 # ── Condition Checker ─────────────────────────────────────────────────────────
-def check_stock_conditions(data):
-    condition_1 = data["Close"] > data["200MA"]
-    condition_1 = condition_1 & (data["Close"] >= data["30MA"]) & (data["Close"] >= data["40MA"])
-    condition_1 = condition_1 & (data["30MA"] > data["40MA"])
+ def check_stock_conditions(data, use_c2, use_c3, use_c5, rs_threshold):
+    condition_1 = (
+        (data["Close"] > data["200MA"]) &
+        (data["Close"] >= data["30MA"]) &
+        (data["Close"] >= data["40MA"]) &
+        (data["30MA"] > data["40MA"])
+    )
     condition_2 = data["150MA"] > data["200MA"]
     condition_3 = data["200MA"].diff(20).gt(0) | data["200MA"].diff(120).gt(0)
     condition_4 = data["Close"] > data["50MA"]
-    condition_5 = data["RS-Ranking"] >= 85
-    condition_6 = data["Volume"].diff().lt(0).rolling(window=5).sum() > 0
-    condition_7 = data["Volume"].rolling(window=10).mean().diff().lt(0)
-    return condition_1 & condition_2 & condition_3 & condition_4 & condition_5
-# ── Sidebar Controls ──────────────────────────────────────────────────────────
+    condition_5 = data["RS-Ranking"] >= rs_threshold
+
+    result = condition_1 & condition_4
+    if use_c2: result = result & condition_2
+    if use_c3: result = result & condition_3
+    if use_c5: result = result & condition_5
+    return result
+ # ── Sidebar Controls ──────────────────────────────────────────────────────────
 st.sidebar.header("⚙️ Settings")
-rs_threshold = st.sidebar.slider("Min RS Ranking", 50, 99, 85)
+rs_threshold = st.sidebar.slider("Min RS Ranking", 50, 99, 70)
 max_stocks   = st.sidebar.number_input("Max stocks to scan (0 = all)", 0, 2000, 200)
-run_button   = st.sidebar.button("🚀 Run Screener", type="primary")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Conditions checked:**")
-st.sidebar.markdown("""
-- ✅ Price > 200MA, 150MA, 30MA, 40MA  
-- ✅ 150MA > 200MA  
-- ✅ 200MA slope rising  
-- ✅ Fresh 50MA crossover today  
-- ✅ RS Ranking ≥ threshold  
-- ✅ Volume consolidating  
-""")
+st.sidebar.markdown("**Toggle Conditions:**")
+use_c2 = st.sidebar.checkbox("150MA > 200MA", value=True)
+use_c3 = st.sidebar.checkbox("200MA slope rising", value=True)
+use_c5 = st.sidebar.checkbox("RS Ranking filter", value=True)
 
+run_button = st.sidebar.button("🚀 Run Screener", type="primary")
 # ── Main Screener ─────────────────────────────────────────────────────────────
 if run_button:
     try:
@@ -87,7 +88,8 @@ if run_button:
             data["200MA"] = data["Close"].rolling(200).mean()
             data["RS-Ranking"] = data["Close"].rolling(252).rank(pct=True) * 100
 
-            is_good = check_stock_conditions(data)
+            is_good = check_stock_conditions(data, use_c2, use_c3, use_c5, rs_threshold)
+
 
             if is_good.iloc[-1]:
                 latest = data.iloc[-1]
