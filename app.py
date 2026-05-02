@@ -9,8 +9,7 @@ st.set_page_config(page_title="NSE Minervini Screener", page_icon="📈", layout
 st.title("📈 NSE Minervini Stock Screener")
 st.caption("Scans NSE stocks for Minervini trend-following breakout conditions")
 
-# ── NSE Ticker List ───────────────────────────────────────────────────────────
-@st.cache_data(ttl=86400)  # cache for 24 hours
+@st.cache_data(ttl=86400)
 def get_nse_tickers():
     url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -20,8 +19,7 @@ def get_nse_tickers():
     symbols = df["SYMBOL"].str.strip().tolist()
     return [s + ".NS" for s in symbols]
 
-# ── Condition Checker ─────────────────────────────────────────────────────────
- def check_stock_conditions(data, use_c2, use_c3, use_c5, rs_threshold):
+def check_stock_conditions(data, use_c2, use_c3, use_c5, rs_threshold):
     condition_1 = (
         (data["Close"] > data["200MA"]) &
         (data["Close"] >= data["30MA"]) &
@@ -34,11 +32,14 @@ def get_nse_tickers():
     condition_5 = data["RS-Ranking"] >= rs_threshold
 
     result = condition_1 & condition_4
-    if use_c2: result = result & condition_2
-    if use_c3: result = result & condition_3
-    if use_c5: result = result & condition_5
+    if use_c2:
+        result = result & condition_2
+    if use_c3:
+        result = result & condition_3
+    if use_c5:
+        result = result & condition_5
     return result
- # ── Sidebar Controls ──────────────────────────────────────────────────────────
+
 st.sidebar.header("⚙️ Settings")
 rs_threshold = st.sidebar.slider("Min RS Ranking", 50, 99, 70)
 max_stocks   = st.sidebar.number_input("Max stocks to scan (0 = all)", 0, 2000, 200)
@@ -50,7 +51,7 @@ use_c3 = st.sidebar.checkbox("200MA slope rising", value=True)
 use_c5 = st.sidebar.checkbox("RS Ranking filter", value=True)
 
 run_button = st.sidebar.button("🚀 Run Screener", type="primary")
-# ── Main Screener ─────────────────────────────────────────────────────────────
+
 if run_button:
     try:
         tickers_list = get_nse_tickers()
@@ -90,17 +91,16 @@ if run_button:
 
             is_good = check_stock_conditions(data, use_c2, use_c3, use_c5, rs_threshold)
 
-
             if is_good.iloc[-1]:
                 latest = data.iloc[-1]
                 good_stocks.append({
-                    "Symbol":      ticker.replace(".NS", ""),
-                    "Close":       round(float(latest["Close"]), 2),
-                    "30MA":        round(float(latest["30MA"]), 2),
-                    "50MA":        round(float(latest["50MA"]), 2),
-                    "200MA":       round(float(latest["200MA"]), 2),
-                    "RS-Ranking":  round(float(latest["RS-Ranking"]), 1),
-                    "Volume":      int(latest["Volume"]),
+                    "Symbol":     ticker.replace(".NS", ""),
+                    "Close":      round(float(latest["Close"]), 2),
+                    "30MA":       round(float(latest["30MA"]), 2),
+                    "50MA":       round(float(latest["50MA"]), 2),
+                    "200MA":      round(float(latest["200MA"]), 2),
+                    "RS-Ranking": round(float(latest["RS-Ranking"]), 1),
+                    "Volume":     int(latest["Volume"]),
                 })
 
         except Exception:
@@ -109,14 +109,11 @@ if run_button:
     progress_bar.empty()
     status_text.empty()
 
-    # ── Results ───────────────────────────────────────────────────────────────
     if good_stocks:
         df_results = pd.DataFrame(good_stocks)
         df_results = df_results.sort_values("RS-Ranking", ascending=False)
-
         st.success(f"✅ {len(good_stocks)} stocks match today!")
         st.dataframe(df_results, use_container_width=True)
-
         csv = df_results.to_csv(index=False).encode("utf-8")
         st.download_button("⬇️ Download CSV", csv, "nse_results.csv", "text/csv")
     else:
@@ -125,10 +122,11 @@ if run_button:
 else:
     st.markdown("""
     ### How to use
-    1. Adjust **Min RS Ranking** in the sidebar (default 85)
+    1. Adjust **Min RS Ranking** in the sidebar (default 70)
     2. Set **Max stocks to scan** (lower = faster; 0 = all ~2000 NSE stocks)
-    3. Click **Run Screener**
-    
-    > ⚠️ Scanning all 2000 stocks takes ~15–20 minutes due to Yahoo Finance rate limits.
+    3. Uncheck conditions to relax filters if no results
+    4. Click **Run Screener**
+
+    > ⚠️ Scanning all 2000 stocks takes 15–20 minutes due to Yahoo Finance rate limits.
     > Start with 100–200 for testing.
     """)
