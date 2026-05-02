@@ -31,7 +31,7 @@ def check_stock_conditions(data):
     condition_5 = data["RS-Ranking"] >= 85
     condition_6 = data["Volume"].diff().lt(0).rolling(window=5).sum() > 0
     condition_7 = data["Volume"].rolling(window=10).mean().diff().lt(0)
-return condition_1 & condition_2 & condition_3 & condition_4 & condition_5
+    return condition_1 & condition_2 & condition_3 & condition_4 & condition_5
 # ── Sidebar Controls ──────────────────────────────────────────────────────────
 st.sidebar.header("⚙️ Settings")
 rs_threshold = st.sidebar.slider("Min RS Ranking", 50, 99, 85)
